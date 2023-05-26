@@ -111,7 +111,7 @@ def PlotaGraficoPopulacao(_geracao=0, _color='green'):
     x1 = []
     x2 = []
     for individuo in populacao:
-        x1.append(individuo['x1'])
+        x1.append(individuo['y'])
         x2.append(individuo['x2'])
 
     # plotar gráfico de pontos
@@ -122,28 +122,45 @@ def PlotaGraficoPopulacao(_geracao=0, _color='green'):
     plt.show() 
 
 # plota gráfico do erro
-def PlotaGraficoMedia(x1, x2, _color='green'):
+def PlotaGraficoMedia(lst_geracao, max, min, media):
     # plotar gráfico de pontos
-    plt.scatter(x1, x2)  
-    plt.title(f'Gráfico do Erro', color=_color) 
-    plt.xlabel('x1') 
-    plt.ylabel('x2') 
+    plt.plot(lst_geracao, max, color='green') 
+    plt.plot(lst_geracao, min, color='red') 
+    plt.plot(lst_geracao, media, color='blue') 
+    plt.title(f'Gráfico da Média') 
+    plt.xlabel('Geração') 
+    plt.ylabel('Fitness') 
     plt.show() 
 
+
 def genetico(show_generations = False):
-    media_x1 = []
-    media_x2 = []
-    for geracao in range(0, geracoes+1):
+    media_y = []
+    max_y = []
+    min_y = []
+    lst_geracao = []
+    for geracao in range(1, geracoes+1):
         # faz o cruzamento
         geraCruzamento()
-        # pega o ponto médio
-        x1 = 0
-        x2 = 0
+        # pega o ponto médio do fitness
+        y = 0
+        max = None
+        min = None
         for individuo in populacao:
-            x1 += individuo['x1']
-            x2 += individuo['x1']
-        media_x1.append(x1/len(populacao))
-        media_x2.append(x2/len(populacao))
+            resultado = alpine2(individuo['x1'], individuo['x2'])
+            y += resultado
+            if max is None or max < resultado:
+                max = resultado
+            if min is None or min > resultado:
+                min = resultado
+        media_y.append(y/len(populacao))
+        max_y.append(max)
+        min_y.append(min)
+        lst_geracao.append(geracao)
+        global taxa_mutacao
+
+        # faz a taxa de mutação decair conforme as gerações
+        if geracao % 10 == 0:
+            taxa_mutacao = taxa_mutacao * 0.9
         
         # mostra gráfico de pontos
         if show_generations is True:
@@ -151,13 +168,13 @@ def genetico(show_generations = False):
                 PlotaGraficoPopulacao(geracao)
         
     # mostra progressão do ponto médio
-    PlotaGraficoMedia(media_x1, media_x2)
+    PlotaGraficoMedia(lst_geracao, max_y, min_y, media_y)
 
 # parametros 
 escala = [0, 10]
 geracoes= 100
-taxa_reproducao = 0.7
-taxa_mutacao = 0.1
+taxa_reproducao = 0.5
+taxa_mutacao = 0.5
 alcance_mutacao = 1
 # cria população
 populacao = geraPopulacao(100)
