@@ -26,7 +26,7 @@ def plotaGrafico(lst_iteracoes, max, min, media):
     plt.plot(lst_iteracoes, media, color='blue') 
     plt.title(f'Gráfico da Média') 
     plt.xlabel('Iteração') 
-    plt.ylabel('Fitness') 
+    plt.ylabel('Distância') 
     plt.show() 
 
 # coloca feromonio em todos os caminhos no inicio
@@ -45,6 +45,15 @@ def geraRotas():
         lst_caminhos.append(linha)
 
     return lst_caminhos
+
+# imprimi o valor dos feromonios das rotas
+def imprimirRotas():
+    for x in range(0,32):
+        linha = []
+        for y in range(0,32):
+            linha.append(round(caminhos[x][y]["feromonio"],1))
+        print(linha)
+    print("--------------------------------------\n")
 
 # calcula a disntancia em linha reta das cidades
 def calculoVizinhanca(city1, city2):
@@ -74,6 +83,8 @@ def roleta(prob_rotas, total):
 
 # gera as formigas e todas as cidades
 def criaFormigas():
+    global lst_formigas
+    lst_formigas = []
     for i, city in enumerate(mapa):
         # lista de todas as cidades menos a que ela começa
         lst_caminho = mapa.copy()
@@ -91,9 +102,9 @@ def probabilidade():
         total = 0
         probabilidade = []
         for i, destino in enumerate(formiga.lst_cidades_a_visitar):
-            feromonio = math.pow(caminhos[origem][int(destino["Cidade"])-1]["feromonio"], alfa)
-            distancia = math.pow(caminhos[origem][int(destino["Cidade"])-1]["distancia"], beta)
-            resultado = feromonio * distancia
+            feromonio = math.pow(caminhos[int(formiga.cidade)-1][int(destino["Cidade"])-1]["feromonio"], alfa)
+            heuristica = math.pow(1/(caminhos[int(formiga.cidade)-1][int(destino["Cidade"])-1]["distancia"]), beta)
+            resultado = feromonio * heuristica
             total += resultado
             if i > 0:
                 resultado += probabilidade[i-1]["somatorio"]
@@ -104,32 +115,68 @@ def probabilidade():
 
         # determina para onde a formiga vai
         nova_cidade = roleta(probabilidade, total)
-        # formiga vai para proxima cidade
 
+        # formiga vai para proxima cidade
         for destino in formiga.lst_cidades_a_visitar:
             # atualiza informações da formiga
             if destino["Cidade"] == nova_cidade:
+                formiga.custo += caminhos[int(formiga.cidade)-1][int(destino["Cidade"])-1]["distancia"] 
                 formiga.cidade = nova_cidade
                 formiga.x = destino["X"] 
                 formiga.y = destino["Y"]
                 formiga.lst_cidades_a_visitar.remove(destino)
                 formiga.caminho.append(nova_cidade)
-                formiga.custo += caminhos[origem][int(destino["Cidade"])-1]["distancia"] 
                 break
+
+def caminhoPercorrido():
+    lst_caminhos = []
+    for x in range(1,33):
+        linha = []
+        for y in range(1,33):
+            linha.append(0)
+        lst_caminhos.append(linha)
+
+    for formiga in lst_formigas:
+        for i in range(1, len(formiga.caminho)):
+            lst_caminhos[int(formiga.caminho[i])-1][int(formiga.caminho[i-1])-1] += (Q / formiga.custo)
+            lst_caminhos[int(formiga.caminho[i-1])-1][int(formiga.caminho[i])-1] += (Q / formiga.custo)
+    return lst_caminhos
+
+# atualiza o valor do feromonio das rotas
+def atualizaFeromonio():
+    soma = caminhoPercorrido()
+    # percorre matriz de caminhos
+    for coluna in range(0, len(caminhos[0])-1):
+        _linha = []
+        for linha in range(coluna+1, len(caminhos[0])):   
+            caminhos[linha][coluna]["feromonio"] = ((1 -  evaporacao) * caminhos[linha][coluna]["feromonio"] ) + soma[linha][coluna]
+            caminhos[coluna][linha]["feromonio"] = ((1 -  evaporacao) * caminhos[coluna][linha]["feromonio"] ) + soma[coluna][linha]
+            _linha.append(linha)
 
 # algoritmo de colonia
 def colonia():
+    # medições
     lst_iteracoes = []
     lst_media = []
     lst_max = []
     lst_min = []
+
+    # iterações
     iteracao = 0
     while iteracao < iteracoes:
+        # reinicia as formigas
+        criaFormigas()
+
+        # visita todas as cidades
         cidades_visitadas = 1
         while cidades_visitadas < len(mapa) + 1:
             probabilidade()
             cidades_visitadas += 1
-        
+
+        # atualiza o feromonio para a proxima iteração
+        atualizaFeromonio()
+
+        # obtem as metricas
         max = None
         min = None
         media = 0
@@ -141,10 +188,13 @@ def colonia():
                 min = formiga.custo
         lst_max.append(max)
         lst_min.append(min)
-        lst_media.append(media/( len(lst_formigas) + 1 )) 
+        lst_media.append(media/( len(lst_formigas) )) 
         lst_iteracoes.append(iteracao)
+
+        # proxima iteração
         iteracao += 1
 
+    # plota o gráfico
     plotaGrafico(lst_iteracoes, lst_max, lst_min, lst_media)
 
 # instancia variaveis de controle
@@ -152,6 +202,10 @@ alfa = 1
 beta = 1
 iteracoes = 100
 evaporacao = 0.5
+Q = 1
+
+# instancia as formigas
+lst_formigas = []
 
 # le o arquivo csv e instancia o mapa das cidades
 mapa = leArquivo("Colonia.csv")
@@ -159,10 +213,5 @@ mapa = leArquivo("Colonia.csv")
 # instancia matriz dos caminhos
 caminhos = geraRotas()
 
-# instancia as formigas
-lst_formigas = []
-criaFormigas()
-
 # executa as iterações
-colonia()
-# rota total: 58.8
+colonia()   # rota total: 58.8
