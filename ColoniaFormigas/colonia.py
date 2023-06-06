@@ -128,7 +128,8 @@ def probabilidade():
                 formiga.caminho.append(nova_cidade)
                 break
 
-def caminhoPercorrido():
+# calcula a quantidade de feromonios a ser colocada em cada vertice
+def feromonioVertices():
     lst_caminhos = []
     for x in range(1,33):
         linha = []
@@ -144,7 +145,7 @@ def caminhoPercorrido():
 
 # atualiza o valor do feromonio das rotas
 def atualizaFeromonio():
-    soma = caminhoPercorrido()
+    soma = feromonioVertices()
     # percorre matriz de caminhos
     for coluna in range(0, len(caminhos[0])-1):
         _linha = []
@@ -152,6 +153,13 @@ def atualizaFeromonio():
             caminhos[linha][coluna]["feromonio"] = ((1 -  evaporacao) * caminhos[linha][coluna]["feromonio"] ) + soma[linha][coluna]
             caminhos[coluna][linha]["feromonio"] = ((1 -  evaporacao) * caminhos[coluna][linha]["feromonio"] ) + soma[coluna][linha]
             _linha.append(linha)
+
+# faz a formiga voltar para seu ponto de partida
+def retornaOrigem():
+    for formiga in lst_formigas:
+        formiga.custo += caminhos[int(formiga.cidade)-1][int(formiga.partida)-1]["distancia"] 
+        formiga.cidade = formiga.partida
+        formiga.caminho.append(formiga.partida)
 
 # algoritmo de colonia
 def colonia():
@@ -172,7 +180,7 @@ def colonia():
         while cidades_visitadas < len(mapa) + 1:
             probabilidade()
             cidades_visitadas += 1
-
+        retornaOrigem()
         # atualiza o feromonio para a proxima iteração
         atualizaFeromonio()
 
@@ -180,12 +188,14 @@ def colonia():
         max = None
         min = None
         media = 0
+        
         for formiga in lst_formigas:
             media += formiga.custo
             if max is None or max < formiga.custo:
                 max = formiga.custo
             if min is None or min > formiga.custo:
                 min = formiga.custo
+                caminho = formiga.caminho
         lst_max.append(max)
         lst_min.append(min)
         lst_media.append(media/( len(lst_formigas) )) 
@@ -193,16 +203,16 @@ def colonia():
 
         # proxima iteração
         iteracao += 1
-
+    
     # plota o gráfico
     plotaGrafico(lst_iteracoes, lst_max, lst_min, lst_media)
 
 # instancia variaveis de controle
-alfa = 1
-beta = 1
-iteracoes = 100
-evaporacao = 0.5
-Q = 1
+alfa = 2
+beta = 1.5    
+iteracoes = 50
+evaporacao = 0.5 
+Q = 10
 
 # instancia as formigas
 lst_formigas = []
