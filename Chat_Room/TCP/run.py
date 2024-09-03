@@ -1,4 +1,4 @@
-from client import client
+from TCP.client import client
 import sys
 import json
 
